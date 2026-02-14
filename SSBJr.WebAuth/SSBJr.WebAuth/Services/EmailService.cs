@@ -27,17 +27,19 @@ public class EmailService : IEmailService
         try
         {
             var smtpSettings = _configuration.GetSection("Email");
+            var fromEmail = smtpSettings["FromEmail"] ?? throw new InvalidOperationException("FromEmail configuration is missing");
+
             using (var client = new SmtpClient(smtpSettings["SmtpServer"]))
             {
                 client.Port = int.Parse(smtpSettings["SmtpPort"] ?? "587");
                 client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
                 client.Credentials = new NetworkCredential(
-                    smtpSettings["FromEmail"],
+                    fromEmail,
                     smtpSettings["SmtpPassword"]
                 );
 
                 var message = new MailMessage(
-                    smtpSettings["FromEmail"],
+                    fromEmail,
                     email
                 )
                 {
@@ -68,17 +70,19 @@ public class EmailService : IEmailService
         try
         {
             var smtpSettings = _configuration.GetSection("Email");
+            var fromEmail = smtpSettings["FromEmail"] ?? throw new InvalidOperationException("FromEmail configuration is missing");
+
             using (var client = new SmtpClient(smtpSettings["SmtpServer"]))
             {
                 client.Port = int.Parse(smtpSettings["SmtpPort"] ?? "587");
                 client.EnableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
                 client.Credentials = new NetworkCredential(
-                    smtpSettings["FromEmail"],
+                    fromEmail,
                     smtpSettings["SmtpPassword"]
                 );
 
                 var message = new MailMessage(
-                    smtpSettings["FromEmail"],
+                    fromEmail,
                     email
                 )
                 {

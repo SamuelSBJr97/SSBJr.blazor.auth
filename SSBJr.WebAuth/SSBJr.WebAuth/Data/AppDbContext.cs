@@ -38,6 +38,10 @@ public class AppDbContext : DbContext
             .IsUnique()
             .HasFilter("[IsDeleted] = 0");
 
+        modelBuilder.Entity<ApplicationUser>()
+            .Property(u => u.Role)
+            .HasDefaultValue("User");
+
         // Configure AuditLog
         modelBuilder.Entity<AuditLog>()
             .HasKey(a => a.AuditId);

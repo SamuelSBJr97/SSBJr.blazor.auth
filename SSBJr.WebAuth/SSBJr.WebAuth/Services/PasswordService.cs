@@ -17,12 +17,17 @@ public class PasswordService : IPasswordService
 
     public string HashPassword(string password)
     {
-        using (var algorithm = new Rfc2898DeriveBytes(password, SaltSize, Iterations, HashAlgorithmName.SHA256))
-        {
-            var key = Convert.ToBase64String(algorithm.GetBytes(HashSize));
-            var salt = Convert.ToBase64String(algorithm.Salt);
-            return $"{Iterations}.{salt}.{key}";
-        }
+        var salt = RandomNumberGenerator.GetBytes(SaltSize);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            Iterations,
+            HashAlgorithmName.SHA256,
+            HashSize);
+
+        var key = Convert.ToBase64String(hash);
+        var saltString = Convert.ToBase64String(salt);
+        return $"{Iterations}.{saltString}.{key}";
     }
 
     public bool VerifyPassword(string password, string hash)
@@ -39,11 +44,14 @@ public class PasswordService : IPasswordService
             var salt = Convert.FromBase64String(parts[1]);
             var key = Convert.FromBase64String(parts[2]);
 
-            using (var algorithm = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256))
-            {
-                var keyToCheck = algorithm.GetBytes(HashSize);
-                return CryptographicOperations.FixedTimeEquals(key, keyToCheck);
-            }
+            var keyToCheck = Rfc2898DeriveBytes.Pbkdf2(
+                password,
+                salt,
+                iterations,
+                HashAlgorithmName.SHA256,
+                HashSize);
+
+            return CryptographicOperations.FixedTimeEquals(key, keyToCheck);
         }
         catch
         {
