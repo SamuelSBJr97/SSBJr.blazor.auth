@@ -1,12 +1,10 @@
 @page "/"
+@page "/login"
 @using SSBJr.WebAuth.Services
-@using System.Security.Claims
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authentication
 @inject SSBJr.WebAuth.Services.IAuthenticationService AuthService
 @inject ITenantService TenantService
 @inject NavigationManager Navigation
-@inject IHttpContextAccessor HttpContextAccessor
 @rendermode InteractiveServer
 
 <PageTitle>Login - SSBJr WebAuth</PageTitle>
@@ -421,31 +419,9 @@
     {
         try
         {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Email, email),
-                new Claim("role", role),
-                new Claim("tenantId", tenantId.ToString())
-            };
-
-            var claimsIdentity = new ClaimsIdentity(claims, Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
-            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
-            var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                await httpContext.SignInAsync(
-                    Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
-                    claimsPrincipal,
-                    new Microsoft.AspNetCore.Authentication.AuthenticationProperties
-                    {
-                        IsPersistent = true,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
-                    });
-
-                Navigation.NavigateTo("/home", forceLoad: true);
-            }
+            // Redirect to non-interactive page that will handle the actual sign-in
+            var queryParams = $"?UserId={userId}&Email={Uri.EscapeDataString(email)}&Role={Uri.EscapeDataString(role)}&TenantId={tenantId}";
+            Navigation.NavigateTo($"/do-login{queryParams}", forceLoad: true);
         }
         catch (Exception ex)
         {

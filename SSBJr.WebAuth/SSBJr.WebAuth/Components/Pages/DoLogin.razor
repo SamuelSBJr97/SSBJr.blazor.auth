@@ -1,0 +1,63 @@
+@page "/do-login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Security.Claims
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Navigation
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? UserId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Email { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Role { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? TenantId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(UserId) || string.IsNullOrEmpty(Email) || 
+            string.IsNullOrEmpty(Role) || string.IsNullOrEmpty(TenantId))
+        {
+            Navigation.NavigateTo("/", replace: true);
+            return;
+        }
+
+        try
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, UserId),
+                new Claim(ClaimTypes.Email, Email),
+                new Claim("role", Role),
+                new Claim("tenantId", TenantId)
+            };
+
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                await httpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    claimsPrincipal,
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = true,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    });
+            }
+
+            Navigation.NavigateTo("/home", replace: true);
+        }
+        catch (Exception)
+        {
+            Navigation.NavigateTo("/?error=auth", replace: true);
+        }
+    }
+}
