@@ -15,6 +15,13 @@ public class AntiCsrfMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Skip CSRF validation for Blazor SignalR endpoints
+        if (context.Request.Path.StartsWithSegments("/_blazor"))
+        {
+            await _next(context);
+            return;
+        }
+
         // Apenas validar em requisições que modificam dados
         if (context.Request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
             context.Request.Method.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
