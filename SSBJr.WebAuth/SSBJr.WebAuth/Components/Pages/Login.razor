@@ -1,0 +1,487 @@
+@page "/"
+@using SSBJr.WebAuth.Services
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@inject SSBJr.WebAuth.Services.IAuthenticationService AuthService
+@inject ITenantService TenantService
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@rendermode InteractiveServer
+
+<PageTitle>Login - SSBJr WebAuth</PageTitle>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h1>🔐 SSBJr WebAuth</h1>
+            <p>Sistema de Autenticação Segura</p>
+        </div>
+
+        @if (!showTwoFactorStep)
+        {
+            <div class="login-form">
+                <h2>Entrar</h2>
+                
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        @errorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        @successMessage
+                    </div>
+                }
+
+                <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="form-group">
+                        <label for="tenantCode">Código do Tenant</label>
+                        <InputText id="tenantCode" class="form-control" @bind-Value="loginModel.TenantCode" placeholder="Digite o código do tenant" />
+                        <ValidationMessage For="@(() => loginModel.TenantCode)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <InputText id="email" class="form-control" type="email" @bind-Value="loginModel.Email" placeholder="seu@email.com" />
+                        <ValidationMessage For="@(() => loginModel.Email)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Senha</label>
+                        <InputText id="password" class="form-control" type="password" @bind-Value="loginModel.Password" placeholder="Digite sua senha" />
+                        <ValidationMessage For="@(() => loginModel.Password)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span> Entrando...</span>
+                        }
+                        else
+                        {
+                            <span>Entrar</span>
+                        }
+                    </button>
+                </EditForm>
+
+                <div class="login-footer">
+                    <p>Não tem uma conta? <a href="/register">Registre-se</a></p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="login-form">
+                <h2>Autenticação de Dois Fatores</h2>
+                
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        @errorMessage
+                    </div>
+                }
+
+                <div class="alert alert-info">
+                    Um código foi enviado para o seu email. Digite o código abaixo:
+                </div>
+
+                <EditForm Model="@twoFactorModel" OnValidSubmit="HandleTwoFactorVerification">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="form-group">
+                        <label for="code">Código de 6 Dígitos</label>
+                        <InputText id="code" class="form-control text-center" @bind-Value="twoFactorModel.Code" placeholder="000000" maxlength="6" />
+                        <ValidationMessage For="@(() => twoFactorModel.Code)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span> Verificando...</span>
+                        }
+                        else
+                        {
+                            <span>Verificar Código</span>
+                        }
+                    </button>
+
+                    <button type="button" class="btn btn-secondary btn-block mt-2" @onclick="CancelTwoFactor">
+                        Voltar
+                    </button>
+                </EditForm>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 450px;
+        overflow: hidden;
+    }
+
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .login-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 2rem;
+    }
+
+    .login-header p {
+        margin: 0;
+        opacity: 0.9;
+    }
+
+    .login-form {
+        padding: 30px;
+    }
+
+    .login-form h2 {
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #555;
+        font-weight: 500;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-control.text-center {
+        text-align: center;
+        font-size: 1.5rem;
+        letter-spacing: 0.5rem;
+    }
+
+    .btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        background: #5a6268;
+    }
+
+    .btn-block {
+        width: 100%;
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+
+    .alert-danger {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+
+    .login-footer {
+        margin-top: 20px;
+        text-align: center;
+        color: #666;
+    }
+
+    .login-footer a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .login-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .spinner-border {
+        width: 1rem;
+        height: 1rem;
+        border-width: 2px;
+        margin-right: 5px;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .mt-2 {
+        margin-top: 0.5rem;
+    }
+
+    .validation-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+    }
+</style>
+
+@code {
+    private LoginModel loginModel = new();
+    private TwoFactorModel twoFactorModel = new();
+    private bool showTwoFactorStep = false;
+    private bool isLoading = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private Guid? currentUserId;
+    private string? currentUserEmail;
+    private string? currentUserRole;
+
+    private async Task HandleLogin()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isLoading = true;
+
+        try
+        {
+            // Buscar tenant pelo código
+            var tenant = await TenantService.GetTenantByCodeAsync(loginModel.TenantCode);
+            if (tenant == null)
+            {
+                errorMessage = "Código do tenant inválido";
+                return;
+            }
+
+            // Tentar fazer login
+            var (success, message, user) = await AuthService.LoginUserAsync(
+                loginModel.Email, 
+                loginModel.Password, 
+                tenant.TenantId);
+
+            if (!success || user == null)
+            {
+                errorMessage = message;
+                return;
+            }
+
+            // Se o usuário tem 2FA habilitado, mostrar tela de 2FA
+            if (user.IsTwoFactorEnabled)
+            {
+                currentUserId = user.UserId;
+                currentUserEmail = user.Email;
+                currentUserRole = user.Role;
+
+                // Gerar código 2FA
+                await AuthService.GenerateTwoFactorCodeAsync(user.UserId);
+                
+                showTwoFactorStep = true;
+                successMessage = "Código de autenticação enviado para seu email";
+            }
+            else
+            {
+                // Login direto sem 2FA
+                await SignInUser(user.UserId, user.Email, user.Role, tenant.TenantId);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro ao fazer login: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleTwoFactorVerification()
+    {
+        errorMessage = null;
+        isLoading = true;
+
+        try
+        {
+            if (currentUserId == null)
+            {
+                errorMessage = "Sessão expirada. Por favor, faça login novamente.";
+                CancelTwoFactor();
+                return;
+            }
+
+            var (success, message) = await AuthService.VerifyTwoFactorCodeAsync(
+                currentUserId.Value, 
+                twoFactorModel.Code);
+
+            if (!success)
+            {
+                errorMessage = message;
+                return;
+            }
+
+            // Buscar tenant novamente
+            var tenant = await TenantService.GetTenantByCodeAsync(loginModel.TenantCode);
+            if (tenant == null)
+            {
+                errorMessage = "Erro ao recuperar informações do tenant";
+                return;
+            }
+
+            // Login bem-sucedido
+            await SignInUser(currentUserId.Value, currentUserEmail!, currentUserRole!, tenant.TenantId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro ao verificar código: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SignInUser(Guid userId, string email, string role, Guid tenantId)
+    {
+        try
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Email, email),
+                new Claim("role", role),
+                new Claim("tenantId", tenantId.ToString())
+            };
+
+            var claimsIdentity = new ClaimsIdentity(claims, Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                await httpContext.SignInAsync(
+                    Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
+                    claimsPrincipal,
+                    new Microsoft.AspNetCore.Authentication.AuthenticationProperties
+                    {
+                        IsPersistent = true,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    });
+
+                Navigation.NavigateTo("/home", forceLoad: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro ao autenticar: {ex.Message}";
+        }
+    }
+
+    private void CancelTwoFactor()
+    {
+        showTwoFactorStep = false;
+        twoFactorModel = new();
+        currentUserId = null;
+        currentUserEmail = null;
+        currentUserRole = null;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Código do tenant é obrigatório")]
+        public string TenantCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email é obrigatório")]
+        [EmailAddress(ErrorMessage = "Email inválido")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Senha é obrigatória")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class TwoFactorModel
+    {
+        [Required(ErrorMessage = "Código é obrigatório")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "Código deve ter 6 dígitos")]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "Código deve conter apenas números")]
+        public string Code { get; set; } = string.Empty;
+    }
+}

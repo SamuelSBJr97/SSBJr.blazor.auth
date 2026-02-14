@@ -9,6 +9,7 @@ public interface ITenantService
 {
     Task<Tenant?> CreateTenantAsync(string name, string slug);
     Task<Tenant?> GetTenantBySlugAsync(string slug);
+    Task<Tenant?> GetTenantByCodeAsync(string code);
     Task<Tenant?> GetTenantByIdAsync(Guid tenantId);
     Task<bool> DeactivateTenantAsync(Guid tenantId);
 }
@@ -71,6 +72,21 @@ public class TenantService : ITenantService
         catch (Exception ex)
         {
             _logger.LogError($"Error getting tenant by slug: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<Tenant?> GetTenantByCodeAsync(string code)
+    {
+        try
+        {
+            return await _context.Tenants
+                .Where(t => t.Slug == code && t.IsActive)
+                .FirstOrDefaultAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error getting tenant by code: {ex.Message}");
             return null;
         }
     }

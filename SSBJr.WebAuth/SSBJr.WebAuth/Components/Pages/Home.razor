@@ -1,7 +1,110 @@
-﻿@page "/"
+﻿@page "/home"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - SSBJr WebAuth</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="home-container">
+    <div class="welcome-card">
+        <h1>Bem-vindo ao SSBJr WebAuth! 🎉</h1>
+        <p>Você está autenticado com sucesso.</p>
 
-Welcome to your new app.
+        <div class="info-section">
+            <h3>Sistema de Autenticação Segura</h3>
+            <ul>
+                <li>✅ Autenticação Multi-Tenant</li>
+                <li>✅ Two-Factor Authentication (2FA)</li>
+                <li>✅ Gestão de Usuários</li>
+                <li>✅ Logs de Auditoria</li>
+                <li>✅ Segurança Avançada</li>
+            </ul>
+        </div>
+
+        <div class="actions">
+            <a href="/logout" class="btn btn-danger">Sair</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .home-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .welcome-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        padding: 40px;
+        max-width: 600px;
+        width: 100%;
+    }
+
+    .welcome-card h1 {
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .welcome-card p {
+        color: #666;
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+    }
+
+    .info-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    .info-section h3 {
+        color: #667eea;
+        margin-bottom: 15px;
+    }
+
+    .info-section ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .info-section li {
+        padding: 8px 0;
+        color: #555;
+        font-size: 1rem;
+    }
+
+    .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+    }
+</style>
