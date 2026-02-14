@@ -1,0 +1,192 @@
+@layout MainLayout
+@page "/gestor/users"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Gestor,Admin")]
+@inject IAuthenticationService AuthService
+
+<div class="container-fluid mt-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Gestão de Usuários</h2>
+        </div>
+        <div class="col-md-4">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Pesquisar usuário..." @bind="SearchTerm" />
+                <button class="btn btn-primary" @onclick="HandleSearch">Pesquisar</button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <div class="alert alert-@(IsSuccess ? "success" : "danger") alert-dismissible fade show" role="alert">
+            @Message
+            <button type="button" class="btn-close" @onclick="() => Message = string.Empty"></button>
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Email</th>
+                    <th>Nome</th>
+                    <th>Função</th>
+                    <th>Status</th>
+                    <th>Último Acesso</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Users)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>@($"{user.FirstName} {user.LastName}".Trim())</td>
+                        <td>
+                            <span class="badge bg-info">@user.Role</span>
+                        </td>
+                        <td>
+                            @if (user.IsBlocked)
+                            {
+                                <span class="badge bg-danger">Bloqueado</span>
+                            }
+                            else if (user.IsDeleted)
+                            {
+                                <span class="badge bg-secondary">Deletado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Ativo</span>
+                            }
+                        </td>
+                        <td>@(user.LastLoginAt?.ToShortDateString() ?? "-")</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-info" @onclick="() => OpenObservationModal(user.UserId)">
+                                    Observações
+                                </button>
+                                @if (!user.IsBlocked)
+                                {
+                                    <button class="btn btn-warning" @onclick="() => BlockUser(user.UserId)">
+                                        Bloquear
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-success" @onclick="() => UnblockUser(user.UserId)">
+                                        Desbloquear
+                                    </button>
+                                }
+                                <button class="btn btn-danger" @onclick="() => DeleteUser(user.UserId)">
+                                    Deletar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+
+    private List<UserItemModel> Users = [];
+    private string SearchTerm = string.Empty;
+    private string Message = string.Empty;
+    private bool IsSuccess = false;
+    private Guid CurrentUserId = Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (Guid.TryParse(userIdClaim?.Value, out var userId))
+            {
+                CurrentUserId = userId;
+            }
+        }
+
+        // TODO: Implementar carregamento de usuários
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        // TODO: Carregar usuários do banco de dados
+    }
+
+    private async Task HandleSearch()
+    {
+        // TODO: Implementar busca
+    }
+
+    private void OpenObservationModal(Guid userId)
+    {
+        // TODO: Abrir modal para adicionar observações
+    }
+
+    private async Task BlockUser(Guid userId)
+    {
+        if (await AuthService.BlockUserAsync(userId, CurrentUserId))
+        {
+            Message = "Usuário bloqueado com sucesso";
+            IsSuccess = true;
+            await LoadUsers();
+        }
+        else
+        {
+            Message = "Erro ao bloquear usuário";
+            IsSuccess = false;
+        }
+    }
+
+    private async Task UnblockUser(Guid userId)
+    {
+        if (await AuthService.UnblockUserAsync(userId, CurrentUserId))
+        {
+            Message = "Usuário desbloqueado com sucesso";
+            IsSuccess = true;
+            await LoadUsers();
+        }
+        else
+        {
+            Message = "Erro ao desbloquear usuário";
+            IsSuccess = false;
+        }
+    }
+
+    private async Task DeleteUser(Guid userId)
+    {
+        if (await AuthService.SoftDeleteUserAsync(userId, CurrentUserId))
+        {
+            Message = "Usuário deletado com sucesso";
+            IsSuccess = true;
+            await LoadUsers();
+        }
+        else
+        {
+            Message = "Erro ao deletar usuário";
+            IsSuccess = false;
+        }
+    }
+
+    public class UserItemModel
+    {
+        public Guid UserId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string Role { get; set; } = string.Empty;
+        public bool IsBlocked { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+    }
+}

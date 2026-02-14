@@ -1,0 +1,131 @@
+@layout MainLayout
+@page "/register"
+@rendermode InteractiveServer
+@inject IAuthenticationService AuthService
+@inject ITenantService TenantService
+@inject NavigationManager Navigation
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-lg">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4">Criar Conta Segura</h2>
+                
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @ErrorMessage
+                        <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+                    </div>
+                }
+
+                <EditForm Model="RegisterModel" OnValidSubmit="HandleRegister">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label for="tenantSlug" class="form-label">Organização</label>
+                        <InputText @bind-Value="TenantSlug" class="form-control" placeholder="Ex: empresa" id="tenantSlug" />
+                        <small class="form-text text-muted">Use o slug da sua organização</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label">Nome</label>
+                            <InputText @bind-Value="FirstName" class="form-control" placeholder="Seu nome" id="firstName" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label">Sobrenome</label>
+                            <InputText @bind-Value="LastName" class="form-control" placeholder="Seu sobrenome" id="lastName" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <InputText @bind-Value="RegisterModel.Email" class="form-control" type="email" placeholder="seu@email.com" id="email" />
+                        <ValidationMessage For="@(() => RegisterModel.Email)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Senha</label>
+                        <InputText @bind-Value="RegisterModel.Password" class="form-control" type="password" placeholder="Mínimo 12 caracteres" id="password" />
+                        <small class="form-text text-muted">
+                            Requisitos: Maiúsculas, minúsculas, números e caracteres especiais
+                        </small>
+                        <ValidationMessage For="@(() => RegisterModel.Password)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="passwordConfirm" class="form-label">Confirmar Senha</label>
+                        <InputText @bind-Value="RegisterModel.PasswordConfirm" class="form-control" type="password" placeholder="Repita a senha" id="passwordConfirm" />
+                        <ValidationMessage For="@(() => RegisterModel.PasswordConfirm)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-3">Cadastrar</button>
+                </EditForm>
+
+                <div class="text-center">
+                    <p>Já tem conta? <a href="/login">Entre aqui</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest RegisterModel = new();
+    private string FirstName = string.Empty;
+    private string LastName = string.Empty;
+    private string TenantSlug = string.Empty;
+    private string ErrorMessage = string.Empty;
+
+    private async Task HandleRegister()
+    {
+        try
+        {
+            ErrorMessage = string.Empty;
+
+            if (RegisterModel.Password != RegisterModel.PasswordConfirm)
+            {
+                ErrorMessage = "As senhas não coincidem";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(TenantSlug))
+            {
+                ErrorMessage = "Organização é obrigatória";
+                return;
+            }
+
+            var tenant = await TenantService.GetTenantBySlugAsync(TenantSlug);
+            if (tenant == null)
+            {
+                ErrorMessage = "Organização não encontrada";
+                return;
+            }
+
+            RegisterModel.TenantId = tenant.TenantId;
+            RegisterModel.FirstName = FirstName;
+            RegisterModel.LastName = LastName;
+
+            var result = await AuthService.RegisterUserAsync(
+                RegisterModel.Email,
+                RegisterModel.Password,
+                RegisterModel.TenantId,
+                FirstName,
+                LastName);
+
+            if (!result.Success)
+            {
+                ErrorMessage = result.Message;
+                return;
+            }
+
+            // Redirecionar para login
+            Navigation.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Erro ao registrar: " + ex.Message;
+        }
+    }
+}

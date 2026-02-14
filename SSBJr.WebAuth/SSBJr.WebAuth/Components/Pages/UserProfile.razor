@@ -1,0 +1,209 @@
+@layout MainLayout
+@page "/user/profile"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "User,Gestor,Admin")]
+@inject IAuthenticationService AuthService
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Meu Perfil</h4>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(SuccessMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @SuccessMessage
+                            <button type="button" class="btn-close" @onclick="() => SuccessMessage = string.Empty"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @ErrorMessage
+                            <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+                        </div>
+                    }
+
+                    <EditForm Model="ProfileModel" OnValidSubmit="HandleSaveProfile">
+                        <DataAnnotationsValidator />
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="firstName" class="form-label">Nome</label>
+                                <InputText @bind-Value="ProfileModel.FirstName" class="form-control" id="firstName" />
+                                <ValidationMessage For="@(() => ProfileModel.FirstName)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="lastName" class="form-label">Sobrenome</label>
+                                <InputText @bind-Value="ProfileModel.LastName" class="form-control" id="lastName" />
+                                <ValidationMessage For="@(() => ProfileModel.LastName)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <InputText @bind-Value="ProfileModel.Email" class="form-control" type="email" disabled />
+                            <small class="form-text text-muted">Email não pode ser alterado</small>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="phoneNumber" class="form-label">Telefone</label>
+                                <InputText @bind-Value="ProfileModel.PhoneNumber" class="form-control" type="tel" id="phoneNumber" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="professionalTitle" class="form-label">Profissão</label>
+                                <InputText @bind-Value="ProfileModel.ProfessionalTitle" class="form-control" id="professionalTitle" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="department" class="form-label">Departamento</label>
+                            <InputText @bind-Value="ProfileModel.Department" class="form-control" id="department" />
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="address" class="form-label">Endereço</label>
+                                <InputText @bind-Value="ProfileModel.Address" class="form-control" id="address" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="city" class="form-label">Cidade</label>
+                                <InputText @bind-Value="ProfileModel.City" class="form-control" id="city" />
+                            </div>
+                            <div class="col-md-4">
+                                <label for="state" class="form-label">Estado</label>
+                                <InputText @bind-Value="ProfileModel.State" class="form-control" maxlength="2" id="state" />
+                            </div>
+                            <div class="col-md-4">
+                                <label for="zipCode" class="form-label">CEP</label>
+                                <InputText @bind-Value="ProfileModel.ZipCode" class="form-control" id="zipCode" />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Salvar Mudanças</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-lg mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Informações da Conta</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Função:</strong> <span class="badge bg-primary">@ProfileModel.Role</span></p>
+                    <p><strong>2FA Ativado:</strong> 
+                        @if (ProfileModel.IsTwoFactorEnabled)
+                        {
+                            <span class="badge bg-success">Sim</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Não</span>
+                        }
+                    </p>
+                    <p><strong>Conta Bloqueada:</strong> 
+                        @if (ProfileModel.IsBlocked)
+                        {
+                            <span class="badge bg-danger">Sim</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Não</span>
+                        }
+                    </p>
+                    <p><strong>Membro desde:</strong> @ProfileModel.CreatedAt.ToShortDateString()</p>
+                    <p><strong>Último acesso:</strong> @(ProfileModel.LastLoginAt?.ToShortDateString() ?? "Nunca")</p>
+                </div>
+            </div>
+
+            <div class="card shadow-lg">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Ações</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-warning w-100 mb-2" @onclick="HandleChangePassword">
+                        Alterar Senha
+                    </button>
+                    <button class="btn btn-danger w-100" @onclick="HandleLogout">
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+
+    private UserProfileModel ProfileModel = new();
+    private string SuccessMessage = string.Empty;
+    private string ErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            // Carregar dados do usuário
+            // TODO: Implementar carregamento de dados do banco
+            ProfileModel.Email = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? string.Empty;
+        }
+    }
+
+    private async Task HandleSaveProfile()
+    {
+        try
+        {
+            // TODO: Implementar salvamento de dados
+            SuccessMessage = "Perfil atualizado com sucesso!";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Erro ao salvar perfil: " + ex.Message;
+        }
+    }
+
+    private void HandleChangePassword()
+    {
+        // TODO: Abrir modal ou navegar para página de alteração de senha
+    }
+
+    private void HandleLogout()
+    {
+        // TODO: Implementar logout
+    }
+
+    public class UserProfileModel
+    {
+        public Guid UserId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? ProfessionalTitle { get; set; }
+        public string? Department { get; set; }
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? ZipCode { get; set; }
+        public string Role { get; set; } = string.Empty;
+        public bool IsTwoFactorEnabled { get; set; }
+        public bool IsBlocked { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+    }
+}

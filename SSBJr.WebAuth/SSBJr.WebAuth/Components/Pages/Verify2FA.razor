@@ -1,0 +1,128 @@
+@layout MainLayout
+@page "/verify-2fa"
+@rendermode InteractiveServer
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject HttpClient HttpClient
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-lg">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4">Autenticação de Dois Fatores</h2>
+                
+                <p class="text-center text-muted mb-4">
+                    Um código de 6 dígitos foi enviado para seu email. Digite-o abaixo.
+                </p>
+
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @ErrorMessage
+                        <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+                    </div>
+                }
+
+                @if (IsSuccess)
+                {
+                    <div class="alert alert-success">
+                        Autenticação bem-sucedida! Redirecionando...
+                    </div>
+                }
+
+                <EditForm Model="VerifyModel" OnValidSubmit="HandleVerify">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Código 2FA</label>
+                        <InputText @bind-Value="VerifyModel.Code" 
+                                  class="form-control form-control-lg text-center" 
+                                  placeholder="000000" 
+                                  maxlength="6"
+                                  id="code" 
+                                  @onkeypress="HandleKeyPress" />
+                        <small class="form-text text-muted">Digite os 6 dígitos do seu código</small>
+                        <ValidationMessage For="@(() => VerifyModel.Code)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-3" disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Verificando...</span>
+                        }
+                        else
+                        {
+                            <span>Verificar</span>
+                        }
+                    </button>
+                </EditForm>
+
+                <div class="text-center">
+                    <a href="/login" class="text-decoration-none">Voltar ao Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? UserId { get; set; }
+
+    private TwoFactorVerifyRequest VerifyModel = new();
+    private string ErrorMessage = string.Empty;
+    private bool IsLoading = false;
+    private bool IsSuccess = false;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(UserId) && Guid.TryParse(UserId, out var userId))
+        {
+            VerifyModel.UserId = userId;
+        }
+    }
+
+    private async Task HandleVerify()
+    {
+        try
+        {
+            ErrorMessage = string.Empty;
+            IsLoading = true;
+
+            if (VerifyModel.Code.Length != 6)
+            {
+                ErrorMessage = "Código deve ter 6 dígitos";
+                return;
+            }
+
+            var result = await AuthService.VerifyTwoFactorCodeAsync(VerifyModel.UserId, VerifyModel.Code);
+
+            if (!result.Success)
+            {
+                ErrorMessage = result.Message;
+                return;
+            }
+
+            IsSuccess = true;
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/user/profile");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Erro ao verificar código: " + ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && VerifyModel.Code.Length == 6)
+        {
+            _ = HandleVerify();
+        }
+    }
+}
