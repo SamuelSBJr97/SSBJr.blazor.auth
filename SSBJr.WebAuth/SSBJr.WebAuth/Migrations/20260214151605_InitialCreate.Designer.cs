@@ -12,7 +12,7 @@ using SSBJr.WebAuth.Data;
 namespace SSBJr.WebAuth.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260214143006_InitialCreate")]
+    [Migration("20260214151605_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -154,8 +154,6 @@ namespace SSBJr.WebAuth.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("TenantId", "CreatedAt");
-
                     b.ToTable("AuditLogs");
                 });
 
@@ -186,9 +184,6 @@ namespace SSBJr.WebAuth.Migrations
 
                     b.HasKey("TenantId");
 
-                    b.HasIndex("Slug")
-                        .IsUnique();
-
                     b.ToTable("Tenants");
                 });
 
@@ -217,7 +212,7 @@ namespace SSBJr.WebAuth.Migrations
 
                     b.HasKey("LogId");
 
-                    b.HasIndex("UserId", "ExpiresAt");
+                    b.HasIndex("UserId");
 
                     b.ToTable("TwoFactorLogs");
                 });
@@ -259,7 +254,7 @@ namespace SSBJr.WebAuth.Migrations
                     b.HasOne("SSBJr.WebAuth.Data.Models.Tenant", "Tenant")
                         .WithMany("Users")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Tenant");
@@ -270,7 +265,7 @@ namespace SSBJr.WebAuth.Migrations
                     b.HasOne("SSBJr.WebAuth.Data.Models.ApplicationUser", "User")
                         .WithMany("AuditLogs")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -292,7 +287,7 @@ namespace SSBJr.WebAuth.Migrations
                     b.HasOne("SSBJr.WebAuth.Data.Models.ApplicationUser", "Gestor")
                         .WithMany()
                         .HasForeignKey("GestorId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SSBJr.WebAuth.Data.Models.ApplicationUser", "User")

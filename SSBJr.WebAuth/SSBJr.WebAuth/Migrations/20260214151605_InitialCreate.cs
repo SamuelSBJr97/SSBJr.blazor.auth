@@ -61,7 +61,7 @@ namespace SSBJr.WebAuth.Migrations
                         column: x => x.TenantId,
                         principalTable: "Tenants",
                         principalColumn: "TenantId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -85,7 +85,7 @@ namespace SSBJr.WebAuth.Migrations
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "UserId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -128,8 +128,7 @@ namespace SSBJr.WebAuth.Migrations
                         name: "FK_UserObservations_Users_GestorId",
                         column: x => x.GestorId,
                         principalTable: "Users",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "UserId");
                     table.ForeignKey(
                         name: "FK_UserObservations_Users_UserId",
                         column: x => x.UserId,
@@ -139,25 +138,14 @@ namespace SSBJr.WebAuth.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_AuditLogs_TenantId_CreatedAt",
-                table: "AuditLogs",
-                columns: new[] { "TenantId", "CreatedAt" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UserId",
                 table: "AuditLogs",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Tenants_Slug",
-                table: "Tenants",
-                column: "Slug",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TwoFactorLogs_UserId_ExpiresAt",
+                name: "IX_TwoFactorLogs_UserId",
                 table: "TwoFactorLogs",
-                columns: new[] { "UserId", "ExpiresAt" });
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserObservations_GestorId",
