@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="SSBJr.WebAuth.AWS.Authentication/SSBJr.WebAuth.AWS.Authentication.csproj" Id="a4b0b060-1296-4759-9bc9-b26b6c1eae8d" />
+  <Project Path="SSBJr.WebAuth.AWS.Repository/SSBJr.WebAuth.AWS.Repository.csproj" Id="d53ee16f-1706-40c3-9da6-cb16e05b6b7a" />
   <Project Path="SSBJr.WebAuth/SSBJr.WebAuth.csproj" />
 </Solution>
